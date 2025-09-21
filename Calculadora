@@ -1,1 +1,206 @@
-https://docs.google.com/document/d/1vbSrNfZo70ky8KF2sw-KYK7JPy6hiieuf9SR-6hIopY/edit?usp=drivesdk
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de PAM y Choque</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="container bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-gray-200">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center mb-4">Calculadora de PAM e Índice de Choque</h1>
+        <p class="text-center text-gray-600 mb-6">Herramienta rápida para la evaluación de la perfusión y el estado de choque en pacientes adultos.</p>
+
+        <!-- Input Section -->
+        <div class="space-y-4">
+            <div>
+                <label for="systolic" class="block text-sm font-medium text-gray-700">Presión Sistólica (mmHg)</label>
+                <input type="number" id="systolic" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej: 120" min="1" step="1">
+            </div>
+            <div>
+                <label for="diastolic" class="block text-sm font-medium text-gray-700">Presión Diastólica (mmHg)</label>
+                <input type="number" id="diastolic" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej: 80" min="1" step="1">
+            </div>
+            <div>
+                <label for="heartRate" class="block text-sm font-medium text-gray-700">Frecuencia Cardiaca (lpm)</label>
+                <input type="number" id="heartRate" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej: 95" min="1" step="1">
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <button id="calculateBtn" class="w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg shadow-md hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                Calcular
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="mt-8 hidden">
+            <div class="bg-indigo-50 rounded-lg p-5">
+                <h2 class="text-xl font-bold text-indigo-700 mb-4">Resultados</h2>
+                <div class="flex flex-col sm:flex-row justify-between items-center sm:space-x-4 space-y-4 sm:space-y-0">
+                    <div class="w-full sm:w-1/2 p-4 bg-white border border-indigo-200 rounded-lg text-center shadow">
+                        <p class="text-sm text-gray-500">Presión Arterial Media (PAM)</p>
+                        <p id="mapResult" class="text-3xl font-extrabold text-indigo-900 mt-1">--</p>
+                        <p class="text-xs text-gray-400">mmHg</p>
+                    </div>
+                    <div class="w-full sm:w-1/2 p-4 bg-white border border-indigo-200 rounded-lg text-center shadow">
+                        <p class="text-sm text-gray-500">Índice de Choque (IC)</p>
+                        <p id="siResult" class="text-3xl font-extrabold text-indigo-900 mt-1">--</p>
+                        <p class="text-xs text-gray-400">lpm/mmHg</p>
+                    </div>
+                </div>
+            </div>
+            <div id="feedback" class="mt-6 p-5 bg-gray-50 rounded-lg border border-gray-200">
+                <!-- Feedback content will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Custom Alert Modal -->
+        <div id="alertModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 text-center">
+                <h3 id="alertTitle" class="text-lg font-bold text-red-600 mb-2"></h3>
+                <p id="alertMessage" class="text-gray-600 mb-4"></p>
+                <button id="closeAlertBtn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Obtener los elementos del DOM
+        const systolicInput = document.getElementById('systolic');
+        const diastolicInput = document.getElementById('diastolic');
+        const heartRateInput = document.getElementById('heartRate');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const resultsSection = document.getElementById('results');
+        const mapResultElement = document.getElementById('mapResult');
+        const siResultElement = document.getElementById('siResult');
+        const feedbackElement = document.getElementById('feedback');
+        const alertModal = document.getElementById('alertModal');
+        const alertTitle = document.getElementById('alertTitle');
+        const alertMessage = document.getElementById('alertMessage');
+        const closeAlertBtn = document.getElementById('closeAlertBtn');
+
+        // Función para mostrar el modal de alerta
+        const showAlert = (title, message) => {
+            alertTitle.textContent = title;
+            alertMessage.textContent = message;
+            alertModal.classList.remove('hidden');
+        };
+
+        // Función para ocultar el modal de alerta
+        closeAlertBtn.addEventListener('click', () => {
+            alertModal.classList.add('hidden');
+        });
+
+        // Evento del botón de cálculo
+        calculateBtn.addEventListener('click', () => {
+            // Limpiar resultados previos
+            mapResultElement.textContent = '--';
+            siResultElement.textContent = '--';
+            feedbackElement.innerHTML = '';
+            resultsSection.classList.add('hidden');
+
+            // Obtener y validar los valores de entrada
+            const sbp = parseFloat(systolicInput.value);
+            const dbp = parseFloat(diastolicInput.value);
+            const hr = parseFloat(heartRateInput.value);
+
+            if (isNaN(sbp) || isNaN(dbp) || isNaN(hr) || sbp <= 0 || dbp <= 0 || hr <= 0) {
+                showAlert('Error de Entrada', 'Por favor, introduce valores numéricos válidos y positivos en todos los campos.');
+                return;
+            }
+
+            if (sbp <= dbp) {
+                showAlert('Error de Entrada', 'La presión sistólica debe ser mayor que la presión diastólica.');
+                return;
+            }
+
+            // Calcular PAM e Índice de Choque (IC)
+            const map = (sbp + 2 * dbp) / 3;
+            const si = hr / sbp;
+
+            // Mostrar los resultados
+            mapResultElement.textContent = map.toFixed(2);
+            siResultElement.textContent = si.toFixed(2);
+            resultsSection.classList.remove('hidden');
+
+            // Generar la retroalimentación
+            generateFeedback(map, si, sbp, hr);
+        });
+
+        // Función para generar la retroalimentación
+        const generateFeedback = (map, si, sbp, hr) => {
+            let feedbackHTML = '<h3 class="text-lg font-semibold text-gray-800 mb-2">Interpretación Clínica</h3>';
+            feedbackHTML += '<div class="space-y-4">';
+
+            // Retroalimentación de PAM
+            feedbackHTML += `
+                <div class="p-4 rounded-lg border">
+                    <h4 class="font-bold text-gray-700">Presión Arterial Media (PAM)</h4>
+                    <p class="text-sm text-gray-600 mt-1">La PAM representa la presión promedio en las arterias durante un ciclo cardiaco, siendo un indicador clave de la perfusión de los órganos vitales.</p>
+            `;
+            if (map < 60) {
+                feedbackHTML += `<p class="mt-2 font-semibold text-red-600">Resultado: ${map.toFixed(2)} mmHg (CRÍTICO)</p>`;
+                feedbackHTML += `<p class="text-sm text-gray-600">Una PAM inferior a 60 mmHg es insuficiente para perfundir adecuadamente órganos como el cerebro, riñones y corazón, pudiendo llevar a isquemia y daño orgánico irreversible. Requiere intervención médica inmediata.</p>`;
+                feedbackHTML += `<p class="text-sm text-gray-600 mt-1"><strong>Posibles causas:</strong> Choque (hipovolémico, séptico, cardiogénico, distributivo), insuficiencia cardiaca severa, hemorragia aguda.</p>`;
+            } else if (map >= 60 && map <= 100) {
+                feedbackHTML += `<p class="mt-2 font-semibold text-green-600">Resultado: ${map.toFixed(2)} mmHg (NORMAL)</p>`;
+                feedbackHTML += `<p class="text-sm text-gray-600">Este valor está dentro del rango objetivo para una perfusión tisular adecuada en la mayoría de los casos. Se considera una homeostasis hemodinámica.</p>`;
+            } else { // map > 100
+                feedbackHTML += `<p class="mt-2 font-semibold text-yellow-600">Resultado: ${map.toFixed(2)} mmHg (ALTA)</p>`;
+                feedbackHTML += `<p class="text-sm text-gray-600">Una PAM elevada indica un exceso de presión sobre las paredes arteriales y los órganos. Si es sostenida, puede causar daño endotelial y aumentar el riesgo de eventos cardiovasculares. Es común en pacientes con hipertensión no controlada.</p>`;
+                feedbackHTML += `<p class="text-sm text-gray-600 mt-1"><strong>Posibles causas:</strong> Hipertensión arterial no controlada, sobrecarga de volumen, estrés agudo, estados de hiperdinamia.</p>`;
+            }
+            feedbackHTML += `</div>`;
+
+            // Retroalimentación de Índice de Choque (IC)
+            feedbackHTML += `
+                <div class="p-4 rounded-lg border">
+                    <h4 class="font-bold text-gray-700">Índice de Choque (IC)</h4>
+                    <p class="text-sm text-gray-600 mt-1">El IC (Frecuencia Cardiaca / Presión Sistólica) es un marcador simple y precoz de la respuesta cardiovascular a la pérdida de volumen, usado como herramienta de triaje en urgencias y cuidado intensivo. Un IC elevado puede preceder a cambios significativos en la presión arterial.</p>
+            `;
+            if (si > 1.3) {
+                feedbackHTML += `<p class="mt-2 font-semibold text-red-600">Resultado: ${si.toFixed(2)} (CHOQUE SEVERO)</p>`;
+                feedbackHTML += `<p class="text-sm text-gray-600">Este valor está fuertemente asociado con un estado de choque severo y un alto riesgo de mortalidad. Implica una descompensación hemodinámica. Se requiere una evaluación y manejo inmediatos.</p>`;
+            } else if (si > 0.9) {
+                feedbackHTML += `<p class="mt-2 font-semibold text-orange-500">Resultado: ${si.toFixed(2)} (CHOQUE COMPENSADO/MODERADO)</p>`;
+                feedbackHTML += `<p class="text-sm text-gray-600">Este rango sugiere que el paciente está en un estado de choque compensado, donde el aumento de la frecuencia cardíaca mantiene la perfusión a pesar de la disminución de la presión. Es un signo de alarma que requiere una investigación profunda de la causa subyacente.</p>`;
+            } else if (si > 0.7) {
+                feedbackHTML += `<p class="mt-2 font-semibold text-yellow-500">Resultado: ${si.toFixed(2)} (LÍMITE ALTO)</p>`;
+                feedbackHTML += `<p class="text-sm text-gray-600">Un valor de IC en este rango puede ser un signo precoz de estrés hemodinámico, especialmente si se asocia a otros signos clínicos. Podría indicar una hemorragia oculta o deshidratación incipiente. Se recomienda monitorización.</p>`;
+            } else { // si <= 0.7
+                feedbackHTML += `<p class="mt-2 font-semibold text-green-600">Resultado: ${si.toFixed(2)} (NORMAL)</p>`;
+                feedbackHTML += `<p class="text-sm text-gray-600">Este valor está en el rango normal, lo que sugiere una respuesta hemodinámica adecuada. Sin embargo, el IC es una herramienta de cribado; debe interpretarse en el contexto clínico completo del paciente.</p>`;
+            }
+            feedbackHTML += `<p class="text-sm text-gray-600 mt-1"><strong>Posibles causas de IC elevado:</strong> Hemorragia (trauma, gastrointestinal), sepsis, embolia pulmonar, infarto agudo de miocardio, choque anafiláctico.</p>`;
+            feedbackHTML += `</div>`;
+
+            feedbackHTML += `</div>`;
+            feedbackElement.innerHTML = feedbackHTML;
+        };
+    </script>
+</body>
+</html>
+
+
